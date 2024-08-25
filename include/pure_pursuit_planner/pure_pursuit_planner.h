@@ -52,4 +52,3 @@ private:
 }  // namespace pure_pursuit_planner
 
 #endif  // PURE_PURSUIT_PLANNER_H
-
