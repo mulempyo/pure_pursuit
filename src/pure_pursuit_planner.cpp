@@ -93,50 +93,23 @@ bool PurePursuitPlanner::computeVelocityCommands(geometry_msgs::Twist& cmd_vel) 
 
   double distance_scale_factor = distance_to_lookahead / lookahead_distance_;
   double adjusted_velocity = min_velocity_ + (max_velocity_ - min_velocity_) * distance_scale_factor;
-
-   if(distance_scale_factor == 0){
-    cmd_vel.linear.x = 0;
-  } else {
-    cmd_vel.linear.x = adjusted_velocity;
-  }
-  
   double adjusted_angular_velocity = min_angular_velocity_ + (fabs(yaw_error)/M_PI) * (max_angular_velocity_ - min_angular_velocity_);
+
+  cmd_vel.angular.z = (yaw_error < 0) ? -adjusted_angular_velocity : adjusted_angular_velocity;
+  
+  if (fabs(yaw_error) < 0.1) { //0.1 rad 
+    double distance_scale_factor = distance_to_lookahead / lookahead_distance_;
+    cmd_vel.linear.x = min_velocity_ + (max_velocity_ - min_velocity_) * distance_scale_factor;
+    cmd_vel.angular.z = (yaw_error < 0) ? -adjusted_angular_velocity : adjusted_angular_velocity;
+  } else {
+    cmd_vel.linear.x = 0.0;
+  }
 
   if (fabs(yaw_error)/M_PI == 0) {
     cmd_vel.angular.z = 0;
   } else {
     cmd_vel.angular.z = (yaw_error < 0) ? -adjusted_angular_velocity : adjusted_angular_velocity;
   }
-  /*
-  if((current_pose_.pose.position.x > lookahead_point.pose.position.x && current_pose_.pose.position.y > lookahead_point.pose.position.y) ||
-    (current_pose_.pose.position.x < lookahead_point.pose.position.x && current_pose_.pose.position.y < lookahead_point.pose.position.y) ||
-    (current_pose_.pose.position.x > lookahead_point.pose.position.x && current_pose_.pose.position.y < lookahead_point.pose.position.y) ||
-    (current_pose_.pose.position.x < lookahead_point.pose.position.x && current_pose_.pose.position.y > lookahead_point.pose.position.y)) {
-
-    double path_distance = getDistance(current_pose_, lookahead_point);
-    double distance_scale_factor_out = path_distance / lookahead_distance_;
-    adjusted_velocity = min_velocity_ + (max_velocity_ - min_velocity_) * distance_scale_factor_out;
-
-    yaw_error = angles::shortest_angular_distance(getYaw(current_pose_), atan2(lookahead_point.pose.position.y - current_pose_.pose.position.y,
-                            lookahead_point.pose.position.x - current_pose_.pose.position.x));
-    adjusted_angular_velocity = min_angular_velocity_ + (fabs(yaw_error)/M_PI) * (max_angular_velocity_ - min_angular_velocity_);
-    
-    if(current_pose_.pose.position.x > lookahead_point.pose.position.x){
-       cmd_vel.linear.x = -adjusted_velocity;
-    }
-    else if(current_pose_.pose.position.x < lookahead_point.pose.position.x){
-       cmd_vel.linear.x = adjusted_velocity;
-    }
-    else{
-      cmd_vel.linear.x = 0;
-    }
-    
-    if (fabs(yaw_error)/M_PI < 0.01) {
-    cmd_vel.angular.z = 0;
-   } else {
-     cmd_vel.angular.z = (yaw_error < 0) ? -adjusted_angular_velocity : adjusted_angular_velocity;
-   }
- }*/
 
   if (distance_to_lookahead < xy_goal_tolerance_ &&
     fabs(yaw_error) < yaw_goal_tolerance_) {
