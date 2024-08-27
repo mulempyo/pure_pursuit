@@ -32,6 +32,7 @@ private:
     base_local_planner::LocalPlannerUtil planner_util_;
     bool is_initialized_;
     bool goal_reached_;
+    bool strict_plan_;
     tf2_ros::Buffer* tf_;
     costmap_2d::Costmap2DROS* costmap_ros_;
     std::vector<geometry_msgs::PoseStamped> global_plan_;
@@ -43,7 +44,8 @@ private:
     double xy_goal_tolerance_;
     double yaw_goal_tolerance_;
     geometry_msgs::PoseStamped current_pose_;
-
+    
+    geometry_msgs::PoseStamped getLookaheadPointStrict(const geometry_msgs::PoseStamped& current_pose_, std::vector<geometry_msgs::PoseStamped>& global_plan_);
     geometry_msgs::PoseStamped getLookaheadPoint(const geometry_msgs::PoseStamped& current_pose_, std::vector<geometry_msgs::PoseStamped>& transformed_plan);
     double getDistance(const geometry_msgs::PoseStamped& pose1, const geometry_msgs::PoseStamped& pose2);
     double getYaw(const geometry_msgs::PoseStamped& pose);

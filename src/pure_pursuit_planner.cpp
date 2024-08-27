@@ -35,6 +35,7 @@ void PurePursuitPlanner::initialize(std::string name, tf2_ros::Buffer* tf, costm
     private_nh.param("min_angular_velocity", min_angular_velocity_, 0.01);  
     private_nh.param("xy_goal_tolerance", xy_goal_tolerance_, 0.1);
     private_nh.param("yaw_goal_tolerance", yaw_goal_tolerance_, 0.1);
+    private_nh.param("strict_plan", strict_plan_, false);
 
     is_initialized_ = true;
     ROS_INFO("Pure Pursuit Planner initialized.");
@@ -83,7 +84,15 @@ bool PurePursuitPlanner::computeVelocityCommands(geometry_msgs::Twist& cmd_vel) 
       global_plan_[i] = transformed_plan[i];
     }
 
-  geometry_msgs::PoseStamped lookahead_point = getLookaheadPoint(current_pose_,global_plan_);
+  geometry_msgs::PoseStamped lookahead_point;
+
+  if(strict_plan_){
+    lookahead_point = getLookaheadPointStrict(current_pose_,global_plan_);
+  }
+  else{
+    lookahead_point = getLookaheadPoint(current_pose_,global_plan_);
+  }
+
   double yaw = getYaw(current_pose_);
   double target_yaw = atan2(lookahead_point.pose.position.y - current_pose_.pose.position.y,
                             lookahead_point.pose.position.x - current_pose_.pose.position.x);
@@ -94,8 +103,6 @@ bool PurePursuitPlanner::computeVelocityCommands(geometry_msgs::Twist& cmd_vel) 
   double distance_scale_factor = distance_to_lookahead / lookahead_distance_;
   double adjusted_velocity = min_velocity_ + (max_velocity_ - min_velocity_) * distance_scale_factor;
   double adjusted_angular_velocity = min_angular_velocity_ + (fabs(yaw_error)/M_PI) * (max_angular_velocity_ - min_angular_velocity_);
-
-  cmd_vel.angular.z = (yaw_error < 0) ? -adjusted_angular_velocity : adjusted_angular_velocity;
   
   if (fabs(yaw_error) < 0.1) { //0.1 rad 
     double distance_scale_factor = distance_to_lookahead / lookahead_distance_;
@@ -124,6 +131,38 @@ bool PurePursuitPlanner::computeVelocityCommands(geometry_msgs::Twist& cmd_vel) 
 bool PurePursuitPlanner::isGoalReached() {
   return goal_reached_;
 }
+
+geometry_msgs::PoseStamped PurePursuitPlanner::getLookaheadPointStrict(const geometry_msgs::PoseStamped& current_pose_, std::vector<geometry_msgs::PoseStamped>& global_plan_) {
+    geometry_msgs::PoseStamped lookahead_point;
+    double accumulated_distance = 0.0;
+    
+    // Iterate through the global plan to find the lookahead point
+    for (size_t i = 0; i < global_plan_.size() - 1; ++i) {
+        double segment_distance = getDistance(global_plan_[i], global_plan_[i + 1]);
+        accumulated_distance += segment_distance;
+
+        if (accumulated_distance >= lookahead_distance_) {
+
+            lookahead_point = global_plan_[i+1];
+
+            geometry_msgs::PoseStamped final_goal = global_plan_.back();
+
+            if(getDistance(current_pose_, final_goal) <= getDistance(current_pose_, lookahead_point)){
+               lookahead_point = final_goal;
+            }
+        }
+    }
+
+    // If the accumulated distance is less than the lookahead distance, set the lookahead point to the final goal
+    if (accumulated_distance < lookahead_distance_) {
+        lookahead_point = global_plan_.back();
+    }
+
+    return lookahead_point;
+}
+
+
+
 
 geometry_msgs::PoseStamped PurePursuitPlanner::getLookaheadPoint(const geometry_msgs::PoseStamped& current_pose_, std::vector<geometry_msgs::PoseStamped>& global_plan_) {
     geometry_msgs::PoseStamped lookahead_point;
