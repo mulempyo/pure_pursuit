@@ -23,7 +23,6 @@ void PurePursuitPlanner::initialize(std::string name, tf2_ros::Buffer* tf, costm
     
     tf_ = tf;
     costmap_ros_ = costmap_ros;
-    costmap_ros_->getRobotPose(current_pose_);
     costmap_2d::Costmap2D* costmap = costmap_ros_->getCostmap();
     planner_util_.initialize(tf_, costmap, costmap_ros_->getGlobalFrameID());
 
